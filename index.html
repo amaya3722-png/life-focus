@@ -12,7 +12,7 @@
     button,input{font:inherit}button{cursor:pointer}.shell{width:min(760px,100%);margin:auto;padding:0 16px 60px}
     header{position:sticky;top:0;z-index:20;background:rgba(244,247,244,.94);backdrop-filter:blur(14px);padding:20px 0 12px}
     .brand{display:flex;align-items:center;justify-content:space-between}.brand h1{font-size:1.45rem;margin:0}.brand p{margin:4px 0 0;color:var(--muted);font-size:.82rem}
-    .sync-button,.primary{border:0;border-radius:12px;background:var(--green);color:#fff;padding:10px 14px;font-weight:700}.sync-button:disabled{opacity:.5}
+    .sync-button,.primary{border:0;border-radius:12px;background:var(--green);color:#fff;padding:10px 14px;font-weight:700}.sync-button:disabled{opacity:.5}.header-actions{display:flex;gap:7px}.connect-button{border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--green-dark);padding:9px 11px;font-size:.75rem;font-weight:700}.connect-button.connected{background:var(--green-soft)}
     .status{display:flex;gap:8px;align-items:center;margin:6px 0 14px;color:var(--muted);font-size:.78rem}.dot{width:8px;height:8px;border-radius:50%;background:#9aa69f}.status.ready .dot{background:var(--green)}.status.error .dot{background:#e55252}
     .panel{background:var(--paper);border:1px solid #edf1ee;border-radius:18px;padding:16px;box-shadow:0 6px 22px rgba(27,54,36,.05);margin-bottom:16px}
     .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.section-head h2{font-size:1rem;margin:0}.section-head span{font-size:.75rem;color:var(--muted)}
@@ -33,7 +33,7 @@
 <body>
   <div class="shell">
     <header>
-      <div class="brand"><div><h1>Life Focus</h1><p id="todayLabel">把今天真正重要的事放进时间里</p></div><button id="syncBtn" class="sync-button">同步任务</button></div>
+      <div class="brand"><div><h1>Life Focus</h1><p id="todayLabel">把今天真正重要的事放进时间里</p></div><div class="header-actions"><button id="connectSyncBtn" class="connect-button">连接同步</button><button id="syncBtn" class="sync-button">同步任务</button></div></div>
       <div id="syncStatus" class="status"><i class="dot"></i><span>正在读取今日重点…</span></div>
     </header>
     <main>
@@ -58,6 +58,7 @@
       <div class="editor-actions"><button id="cancelTimeBlockEdit">取消</button><button id="saveTimeBlockEdit" class="save">保存</button></div>
     </div>
   </dialog>
+  <script src="js/remote-sync.js"></script>
   <script src="js/app.js"></script>
   <script src="js/time-block.js"></script>
   <script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js'))}</script>

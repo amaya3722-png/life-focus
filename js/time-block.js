@@ -12,6 +12,7 @@
     var dragData = null;
     var touchDrag = null;
     var tickHandle = null;
+    var remoteImported = {};
 
     function activeDate() {
         if (typeof selectedDate !== 'undefined' && /^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) return selectedDate;
@@ -80,6 +81,8 @@
             target.taskSnapshot = Object.assign({}, rule.taskSnapshot, { date: date });
             target.status = 'planned';
             target.recurrenceId = rule.id;
+            target.remoteBlockId = 'Brecur-' + rule.id + '-' + date;
+            queueBlock(target);
         });
     }
     function esc(value) {
@@ -96,8 +99,30 @@
         return {
             id: task.id, name: task.name, subject: task.subject || '', description: task.description || '',
             plannedDuration: task.plannedDuration || 45, coins: task.coins || 0,
-            date: task.date || activeDate(), externalSource: task.externalSource || '', externalTaskId: task.externalTaskId || ''
+            date: task.date || activeDate(), sourceTaskId: task.sourceTaskId || '', externalSource: task.externalSource || '', externalTaskId: task.externalTaskId || ''
         };
+    }
+    function canonicalTaskId(slot) { return slot && slot.taskSnapshot && slot.taskSnapshot.sourceTaskId || ''; }
+    function newBlockId() { return 'Bweb-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8); }
+    function queueBlock(slot) {
+        if (!window.LifeFocusRemote || !slot || !slot.taskId || !canonicalTaskId(slot)) return;
+        if (!slot.remoteBlockId) slot.remoteBlockId = newBlockId();
+        LifeFocusRemote.enqueue('upsert_time_block', {date: activeDate(), blockId: slot.remoteBlockId, at: slot.hour, taskId: canonicalTaskId(slot), plannedMinutes: slot.taskSnapshot.plannedDuration || 45, title: slot.taskSnapshot.name});
+    }
+    function importRemoteBlocks() {
+        var date = activeDate();
+        if (remoteImported[date] || typeof window.latestRemoteTimeBlocks === 'undefined') return;
+        remoteImported[date] = true;
+        (window.latestRemoteTimeBlocks || []).forEach(function (block) {
+            if (block.state === 'cancelled') return;
+            var task = (typeof tasks === 'undefined' ? [] : tasks).find(function (item) { return String(item.sourceTaskId) === String(block.taskId); });
+            var target = timeBlocks[date] && timeBlocks[date].find(function (slot) { return slot.hour === block.at; });
+            if (!task || !target || target.taskId) return;
+            target.taskId = String(task.id); target.taskSnapshot = snapshot(task); target.taskSnapshot.name = block.title || task.name;
+            target.taskSnapshot.plannedDuration = block.plannedMinutes || task.plannedDuration || 45;
+            target.status = block.state === 'done' ? 'completed' : 'planned'; target.remoteBlockId = block.id;
+        });
+        save();
     }
     function scheduledIds() {
         return slots().filter(function (slot) { return slot.taskId; }).map(function (slot) { return String(slot.taskId); });
@@ -106,6 +131,7 @@
     function render() {
         var grid = document.getElementById('timeBlockGrid');
         if (!grid) return;
+        importRemoteBlocks();
         grid.innerHTML = '';
         slots().forEach(function (slot) { grid.appendChild(slotElement(slot)); });
         updateTaskPool();
@@ -221,15 +247,15 @@
     function placeTask(task, targetId) {
         var target = slotById(targetId);
         if (!target) return;
-        target.taskId = String(task.id); target.taskSnapshot = snapshot(task); target.status = task.status === 'completed' ? 'completed' : 'planned';
-        delete timers[target.id]; save(); render(); flash(targetId);
+        target.taskId = String(task.id); target.taskSnapshot = snapshot(task); target.status = 'planned'; target.remoteBlockId = newBlockId();
+        delete timers[target.id]; queueBlock(target); save(); render(); flash(targetId);
     }
     function moveSlot(sourceId, targetId) {
         if (sourceId === targetId) return;
         var source = slotById(sourceId), target = slotById(targetId);
         if (!source || !target) return;
-        var sourceData = { taskId: source.taskId, taskSnapshot: source.taskSnapshot, status: source.status, recurrenceId: source.recurrenceId || null };
-        var targetData = { taskId: target.taskId, taskSnapshot: target.taskSnapshot, status: target.status, recurrenceId: target.recurrenceId || null };
+        var sourceData = { taskId: source.taskId, taskSnapshot: source.taskSnapshot, status: source.status, recurrenceId: source.recurrenceId || null, remoteBlockId: source.remoteBlockId || null };
+        var targetData = { taskId: target.taskId, taskSnapshot: target.taskSnapshot, status: target.status, recurrenceId: target.recurrenceId || null, remoteBlockId: target.remoteBlockId || null };
         Object.assign(target, sourceData); Object.assign(source, targetData);
         [source, target].forEach(function (slot) {
             if (!slot.recurrenceId) return;
@@ -238,7 +264,7 @@
         });
         var timer = timers[sourceId]; timers[sourceId] = timers[targetId]; timers[targetId] = timer;
         if (!timers[sourceId]) delete timers[sourceId]; if (!timers[targetId]) delete timers[targetId];
-        save(); render(); flash(targetId);
+        queueBlock(source); queueBlock(target); save(); render(); flash(targetId);
     }
     function removeSlot(id) {
         var slot = slotById(id); if (!slot) return;
@@ -247,7 +273,8 @@
             var rule = recurrences.find(function (item) { return item.id === slot.recurrenceId; });
             if (rule) { rule.skippedDates = rule.skippedDates || []; if (rule.skippedDates.indexOf(activeDate()) < 0) rule.skippedDates.push(activeDate()); }
         }
-        delete timers[id]; slot.taskId = null; slot.taskSnapshot = null; slot.recurrenceId = null; slot.status = 'empty'; save(); render();
+        if (window.LifeFocusRemote && slot.remoteBlockId) LifeFocusRemote.enqueue('time_block_state', {date: activeDate(), blockId: slot.remoteBlockId, state: 'cancelled'});
+        delete timers[id]; slot.taskId = null; slot.taskSnapshot = null; slot.recurrenceId = null; slot.remoteBlockId = null; slot.status = 'empty'; save(); render();
     }
     function openEditor(id) {
         var slot = slotById(id), dialog = document.getElementById('timeBlockEditor');
@@ -284,7 +311,7 @@
             recurrences = recurrences.filter(function (item) { return item.id !== rule.id; });
             slot.recurrenceId = null;
         }
-        save(); closeEditor(); render(); toast(daily ? '已保存，并设为每天重复。' : '时间块已更新。');
+        queueBlock(slot); save(); closeEditor(); render(); toast(daily ? '已保存，并设为每天重复。' : '时间块已更新。');
     }
     function flash(id) {
         requestAnimationFrame(function () { var el = document.querySelector('[data-slot-id="' + id + '"]'); if (el) { el.classList.add('just-dropped'); setTimeout(function () { el.classList.remove('just-dropped'); }, 700); } });
@@ -336,21 +363,17 @@
                 var task = taskById(slot.taskId); if (task) { task.actualDuration = (task.actualDuration || 0) + 45; if (typeof saveData === 'function') saveData(); }
                 timer.focusRecorded = true;
             }
+            if (window.LifeFocusRemote && canonicalTaskId(slot)) LifeFocusRemote.enqueue('focus_event', {date: activeDate(), at: LifeFocusRemote.now(), taskId: canonicalTaskId(slot), durationMinutes: 45, title: '番茄钟：' + slot.taskSnapshot.name});
             if (timer.remoteSessionId && window.LifeFocusSync) LifeFocusSync.finishPomodoro(timer.remoteSessionId, 'complete');
             timer.phase = 'rest'; timer.remainingSec = REST_SECONDS; timer.ready = true; toast('🔔 45 分钟专注完成，点击“开始休息”进入 15 分钟休息。');
         } else {
-            delete timers[id]; setCompleted(id, true); toast('✅ 休息结束，时间块和任务已完成。');
+            delete timers[id]; toast('🔔 休息结束。完成与否请由你手动勾选。');
         }
     }
     function setCompleted(id, completed) {
         var slot = slotById(id); if (!slot) return;
         slot.status = completed ? 'completed' : 'planned';
-        var task = taskById(slot.taskId);
-        if (task && task.status !== (completed ? 'completed' : 'pending')) {
-            task.status = completed ? 'completed' : 'pending';
-            if (typeof saveData === 'function') saveData();
-            if (typeof renderTaskList === 'function') renderTaskList();
-        }
+        if (window.LifeFocusRemote && slot.remoteBlockId) LifeFocusRemote.enqueue('time_block_state', {date: activeDate(), blockId: slot.remoteBlockId, state: completed ? 'done' : 'planned'});
         save();
     }
     function ensureTicker() { if (!tickHandle) tickHandle = setInterval(tick, 500); }
