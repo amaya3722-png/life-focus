@@ -8,6 +8,7 @@
     var REST_SECONDS = 15 * 60;
     var timeBlocks = {};
     var timers = {};
+    var recurrences = [];
     var dragData = null;
     var touchDrag = null;
     var tickHandle = null;
@@ -25,12 +26,18 @@
         var uid = typeof currentUserId !== 'undefined' ? currentUserId : 'default';
         return 'timeBlockTimers_v2_' + uid;
     }
+    function recurrenceKey() {
+        var uid = typeof currentUserId !== 'undefined' ? currentUserId : 'default';
+        return 'timeBlockRecurrences_v1_' + uid;
+    }
     function readJson(key, fallback) {
         try { return JSON.parse(localStorage.getItem(key) || '') || fallback; } catch (e) { return fallback; }
     }
     function load() {
         timeBlocks = readJson(storageKey(), {});
         timers = readJson(timerKey(), {});
+        recurrences = readJson(recurrenceKey(), []);
+        if (!Array.isArray(recurrences)) recurrences = [];
         Object.keys(timers).forEach(function (id) {
             timers[id].isRunning = false;
             timers[id].endAt = null;
@@ -38,6 +45,7 @@
     }
     function save() {
         localStorage.setItem(storageKey(), JSON.stringify(timeBlocks));
+        localStorage.setItem(recurrenceKey(), JSON.stringify(recurrences));
         var safeTimers = {};
         Object.keys(timers).forEach(function (id) {
             var t = Object.assign({}, timers[id]);
@@ -58,7 +66,21 @@
     function slots() {
         var date = activeDate();
         if (!Array.isArray(timeBlocks[date])) timeBlocks[date] = newSlots(date);
+        applyRecurrences(date);
         return timeBlocks[date];
+    }
+    function applyRecurrences(date) {
+        var daySlots = timeBlocks[date];
+        if (!Array.isArray(daySlots)) return;
+        recurrences.forEach(function (rule) {
+            if (!rule || rule.frequency !== 'daily' || !rule.active || date < rule.startDate || (rule.skippedDates || []).indexOf(date) >= 0) return;
+            var target = daySlots.find(function (slot) { return slot.hour === rule.hour; });
+            if (!target || target.taskId) return;
+            target.taskId = String(rule.taskSnapshot.id);
+            target.taskSnapshot = Object.assign({}, rule.taskSnapshot, { date: date });
+            target.status = 'planned';
+            target.recurrenceId = rule.id;
+        });
     }
     function esc(value) {
         var el = document.createElement('span');
@@ -107,7 +129,8 @@
             var timer = timers[slot.id];
             content = '<div class="time-slot-content">' +
                 '<div class="time-block-head"><label class="time-block-check"><input type="checkbox" data-action="complete" data-slot-id="' + slot.id + '" ' + (slot.status === 'completed' ? 'checked' : '') + '><span></span></label>' +
-                '<div class="time-block-copy"><strong>' + esc(slot.taskSnapshot.name) + '</strong><small>' + esc(slot.taskSnapshot.subject) + ' · ' + (slot.taskSnapshot.plannedDuration || 45) + '分钟</small></div>' +
+                '<div class="time-block-copy"><strong>' + esc(slot.taskSnapshot.name) + (slot.recurrenceId ? '<span class="repeat-badge">每天</span>' : '') + '</strong><small>' + esc(slot.taskSnapshot.subject) + ' · ' + (slot.taskSnapshot.plannedDuration || 45) + '分钟</small></div>' +
+                '<button class="time-block-edit" data-action="edit" data-slot-id="' + slot.id + '" title="编辑任务">编辑</button>' +
                 '<button class="time-block-remove" data-action="remove" data-slot-id="' + slot.id + '" title="移回任务池">×</button></div>' +
                 (timer ? timerHtml(slot.id, timer) : '<button class="mini-pomo-open" data-action="timer-open" data-slot-id="' + slot.id + '">🍅 45 分钟专注</button>') + '</div>';
         }
@@ -205,9 +228,14 @@
         if (sourceId === targetId) return;
         var source = slotById(sourceId), target = slotById(targetId);
         if (!source || !target) return;
-        var sourceData = { taskId: source.taskId, taskSnapshot: source.taskSnapshot, status: source.status };
-        var targetData = { taskId: target.taskId, taskSnapshot: target.taskSnapshot, status: target.status };
+        var sourceData = { taskId: source.taskId, taskSnapshot: source.taskSnapshot, status: source.status, recurrenceId: source.recurrenceId || null };
+        var targetData = { taskId: target.taskId, taskSnapshot: target.taskSnapshot, status: target.status, recurrenceId: target.recurrenceId || null };
         Object.assign(target, sourceData); Object.assign(source, targetData);
+        [source, target].forEach(function (slot) {
+            if (!slot.recurrenceId) return;
+            var rule = recurrences.find(function (item) { return item.id === slot.recurrenceId; });
+            if (rule) rule.hour = slot.hour;
+        });
         var timer = timers[sourceId]; timers[sourceId] = timers[targetId]; timers[targetId] = timer;
         if (!timers[sourceId]) delete timers[sourceId]; if (!timers[targetId]) delete timers[targetId];
         save(); render(); flash(targetId);
@@ -215,7 +243,48 @@
     function removeSlot(id) {
         var slot = slotById(id); if (!slot) return;
         if (timers[id] && timers[id].remoteSessionId && window.LifeFocusSync) LifeFocusSync.finishPomodoro(timers[id].remoteSessionId, 'cancel');
-        delete timers[id]; slot.taskId = null; slot.taskSnapshot = null; slot.status = 'empty'; save(); render();
+        if (slot.recurrenceId) {
+            var rule = recurrences.find(function (item) { return item.id === slot.recurrenceId; });
+            if (rule) { rule.skippedDates = rule.skippedDates || []; if (rule.skippedDates.indexOf(activeDate()) < 0) rule.skippedDates.push(activeDate()); }
+        }
+        delete timers[id]; slot.taskId = null; slot.taskSnapshot = null; slot.recurrenceId = null; slot.status = 'empty'; save(); render();
+    }
+    function openEditor(id) {
+        var slot = slotById(id), dialog = document.getElementById('timeBlockEditor');
+        if (!slot || !slot.taskSnapshot || !dialog) return;
+        dialog.dataset.slotId = id;
+        document.getElementById('editTaskName').value = slot.taskSnapshot.name || '';
+        document.getElementById('editTaskSubject').value = slot.taskSnapshot.subject || '其他';
+        document.getElementById('editTaskDuration').value = slot.taskSnapshot.plannedDuration || 45;
+        document.getElementById('editTaskDaily').checked = Boolean(slot.recurrenceId);
+        if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', '');
+    }
+    function closeEditor() {
+        var dialog = document.getElementById('timeBlockEditor');
+        if (!dialog) return;
+        if (typeof dialog.close === 'function') dialog.close(); else dialog.removeAttribute('open');
+    }
+    function saveEditor() {
+        var dialog = document.getElementById('timeBlockEditor'), slot = dialog && slotById(dialog.dataset.slotId);
+        if (!slot || !slot.taskSnapshot) return;
+        var name = document.getElementById('editTaskName').value.trim();
+        var subject = document.getElementById('editTaskSubject').value;
+        var duration = Math.max(1, Math.min(720, Number(document.getElementById('editTaskDuration').value) || 45));
+        var daily = document.getElementById('editTaskDaily').checked;
+        if (!name) { toast('任务名称不能为空。'); return; }
+        slot.taskSnapshot.name = name; slot.taskSnapshot.subject = subject; slot.taskSnapshot.plannedDuration = duration;
+        var rule = slot.recurrenceId && recurrences.find(function (item) { return item.id === slot.recurrenceId; });
+        if (daily) {
+            if (!rule) {
+                rule = { id: 'repeat_' + Date.now(), frequency: 'daily', active: true, startDate: activeDate(), hour: slot.hour, taskSnapshot: {} };
+                recurrences.push(rule); slot.recurrenceId = rule.id;
+            }
+            rule.active = true; rule.hour = slot.hour; rule.taskSnapshot = Object.assign({}, slot.taskSnapshot);
+        } else if (rule) {
+            recurrences = recurrences.filter(function (item) { return item.id !== rule.id; });
+            slot.recurrenceId = null;
+        }
+        save(); closeEditor(); render(); toast(daily ? '已保存，并设为每天重复。' : '时间块已更新。');
     }
     function flash(id) {
         requestAnimationFrame(function () { var el = document.querySelector('[data-slot-id="' + id + '"]'); if (el) { el.classList.add('just-dropped'); setTimeout(function () { el.classList.remove('just-dropped'); }, 700); } });
@@ -300,6 +369,7 @@
         else if (action === 'timer-toggle') toggleTimer(id);
         else if (action === 'timer-reset') resetTimer(id);
         else if (action === 'remove') removeSlot(id);
+        else if (action === 'edit') openEditor(id);
         else if (action === 'complete') { setCompleted(id, e.target.checked); render(); }
     }
 
@@ -337,6 +407,12 @@
     function init() {
         load(); render(); bindTaskDragEvents(); ensureTicker();
         var grid = document.getElementById('timeBlockGrid'); if (grid) grid.addEventListener('click', gridClick);
+        var editor = document.getElementById('timeBlockEditor');
+        if (editor) {
+            document.getElementById('saveTimeBlockEdit').addEventListener('click', saveEditor);
+            document.getElementById('cancelTimeBlockEdit').addEventListener('click', closeEditor);
+            editor.addEventListener('click', function (e) { if (e.target === editor) closeEditor(); });
+        }
         document.addEventListener('touchstart', touchStart, { passive: true });
         document.addEventListener('touchmove', touchMove, { passive: false });
         document.addEventListener('touchend', touchEnd); document.addEventListener('touchcancel', touchEnd);
