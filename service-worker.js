@@ -1,4 +1,4 @@
-const CACHE='life-focus-v1';
+const CACHE='life-focus-v2';
 const SHELL=['./','./index.html','./js/app.js','./js/time-block.js','./manifest.json'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
