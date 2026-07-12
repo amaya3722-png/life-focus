@@ -17,15 +17,15 @@
     var local=localTasks(),byKey={};local.forEach(function(t){byKey[t.sourceKey||('local:'+t.id)]=t});
     var entry=data&&data.entries&&data.entries[selectedDate];
     if(entry&&Array.isArray(entry.subjects))entry.subjects.forEach(function(subject){(subject.tasks||[]).forEach(function(item){
-      var key=selectedDate+'|'+subject.name+'|'+item.title,old=byKey[key];
-      if(!old)byKey[key]={id:stableId(key),sourceKey:key,name:item.title,subject:subject.name||'其他',description:'来自企微今日重点',plannedDuration:item.estimatedMinutes||45,actualDuration:0,status:'pending',date:selectedDate,fromShared:true};
-      else{old.name=item.title;old.subject=subject.name||old.subject;old.plannedDuration=item.estimatedMinutes||old.plannedDuration}
+      var key=selectedDate+'|'+(item.id||subject.name+'|'+item.title),old=byKey[key],remoteStatus=item.state==='done'?'completed':(item.state==='cancelled'?'cancelled':'pending');
+      if(!old)byKey[key]={id:stableId(key),sourceKey:key,name:item.title,subject:subject.name||'其他',description:'来自企微今日重点',plannedDuration:item.estimatedMinutes||45,actualDuration:0,status:remoteStatus,date:selectedDate,fromShared:true};
+      else{old.name=item.title;old.subject=subject.name||old.subject;old.plannedDuration=item.estimatedMinutes||old.plannedDuration;old.status=remoteStatus}
     })});
     tasks=Object.keys(byKey).map(function(k){return byKey[k]}).filter(function(t){return t.date===selectedDate});saveData();
   }
   function escapeHtml(value){var el=document.createElement('span');el.textContent=value||'';return el.innerHTML}
   window.renderTaskList=function(){
-    var host=document.getElementById('taskList');if(!host)return;var visible=tasks.filter(function(t){return t.date===selectedDate});
+    var host=document.getElementById('taskList');if(!host)return;var visible=tasks.filter(function(t){return t.date===selectedDate&&t.status!=='cancelled'});
     if(!visible.length){host.innerHTML='<div class="empty">企微还没有今天的重点，也可以先手动添加。</div>';return}
     host.innerHTML=visible.map(function(t){var color=SUBJECT_COLORS[t.subject]||SUBJECT_COLORS['其他'];return '<div class="task-card card-hover '+(t.status==='completed'?'completed':'')+'" draggable="true" data-task-id="'+t.id+'" style="--task-color:'+color+'"><input type="checkbox" '+(t.status==='completed'?'checked':'')+' data-task-check="'+t.id+'"><div class="task-copy"><strong>'+escapeHtml(t.name)+'</strong><small>'+escapeHtml(t.subject)+' · '+(t.plannedDuration||45)+' 分钟</small></div></div>'}).join('');
     host.querySelectorAll('[data-task-check]').forEach(function(box){box.addEventListener('change',function(){var task=tasks.find(function(t){return String(t.id)===String(box.dataset.taskCheck)});if(task){task.status=box.checked?'completed':'pending';saveData();renderTaskList();if(window.TimeBlock)TimeBlock.refresh()}})});
