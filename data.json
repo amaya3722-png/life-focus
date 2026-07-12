@@ -1,5 +1,5 @@
 {
-  "updated": "2026-07-12T19:13:44+08:00",
+  "updated": "2026-07-12T21:01:17+08:00",
   "entries": {
     "2026-07-12": {
       "status": "open",
@@ -10,6 +10,12 @@
             {
               "id": "T1",
               "title": "完成今天最重要的工作",
+              "estimatedMinutes": 45,
+              "state": "open"
+            },
+            {
+              "id": "T1634955058",
+              "title": "唱歌",
               "estimatedMinutes": 45,
               "state": "open"
             }
