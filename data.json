@@ -1,4 +1,43 @@
 {
-  "updated": "",
-  "entries": {}
+  "updated": "2026-07-12T19:13:44+08:00",
+  "entries": {
+    "2026-07-12": {
+      "status": "open",
+      "subjects": [
+        {
+          "name": "主线",
+          "tasks": [
+            {
+              "id": "T1",
+              "title": "完成今天最重要的工作",
+              "estimatedMinutes": 45,
+              "state": "open"
+            }
+          ]
+        },
+        {
+          "name": "工作",
+          "tasks": [
+            {
+              "id": "T2",
+              "title": "处理一个找工作任务",
+              "estimatedMinutes": 45,
+              "state": "open"
+            }
+          ]
+        },
+        {
+          "name": "家人",
+          "tasks": [
+            {
+              "id": "T3",
+              "title": "晚上陪伴家人",
+              "estimatedMinutes": 45,
+              "state": "open"
+            }
+          ]
+        }
+      ]
+    }
+  }
 }
