@@ -1,5 +1,5 @@
 {
-  "updated": "2026-07-12T21:54:25+08:00",
+  "updated": "2026-07-13T06:40:25+08:00",
   "entries": {
     "2026-07-12": {
       "status": "open",
@@ -38,6 +38,23 @@
             {
               "id": "T3",
               "title": "晚上陪伴家人",
+              "estimatedMinutes": 45,
+              "state": "open"
+            }
+          ]
+        }
+      ],
+      "timeBlocks": []
+    },
+    "2026-07-13": {
+      "status": "open",
+      "subjects": [
+        {
+          "name": "工作",
+          "tasks": [
+            {
+              "id": "T3487963991",
+              "title": "。户口迁移。英语学习。投简历。",
               "estimatedMinutes": 45,
               "state": "open"
             }
