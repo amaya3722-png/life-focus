@@ -1,5 +1,5 @@
 {
-  "updated": "2026-07-13T06:46:33+08:00",
+  "updated": "2026-07-13T07:17:09+08:00",
   "entries": {
     "2026-07-12": {
       "status": "open",
@@ -50,19 +50,94 @@
       "status": "open",
       "subjects": [
         {
+          "name": "主线",
+          "tasks": [
+            {
+              "id": "T5023097189",
+              "title": "学英语",
+              "estimatedMinutes": 45,
+              "state": "open"
+            },
+            {
+              "id": "T2026071301",
+              "title": "学英语",
+              "estimatedMinutes": 45,
+              "state": "cancelled"
+            }
+          ]
+        },
+        {
           "name": "工作",
           "tasks": [
             {
               "id": "T3487963991",
               "title": "。户口迁移。英语学习。投简历。",
               "estimatedMinutes": 45,
-              "state": "open"
+              "state": "cancelled"
             },
             {
               "id": "T2805145515",
               "title": "，主线任务是学英语。支线任务，第1个投简历，第2个去办理户口迁移。其他任务。唱歌一小时。",
               "estimatedMinutes": 45,
+              "state": "cancelled"
+            },
+            {
+              "id": "T1111686224",
+              "title": "投简历",
+              "estimatedMinutes": 45,
               "state": "open"
+            },
+            {
+              "id": "T2026071302",
+              "title": "投简历",
+              "estimatedMinutes": 45,
+              "state": "cancelled"
+            }
+          ]
+        },
+        {
+          "name": "娱乐",
+          "tasks": [
+            {
+              "id": "T4903214460",
+              "title": "唱歌",
+              "estimatedMinutes": 45,
+              "state": "open"
+            }
+          ]
+        },
+        {
+          "name": "其他",
+          "tasks": [
+            {
+              "id": "T2992476383",
+              "title": "。",
+              "estimatedMinutes": 45,
+              "state": "cancelled"
+            },
+            {
+              "id": "T3563549171",
+              "title": "优化ai。",
+              "estimatedMinutes": 45,
+              "state": "open"
+            },
+            {
+              "id": "T2907294918",
+              "title": "办理户口迁移",
+              "estimatedMinutes": 45,
+              "state": "open"
+            },
+            {
+              "id": "T2026071303",
+              "title": "去办理户口迁移",
+              "estimatedMinutes": 45,
+              "state": "cancelled"
+            },
+            {
+              "id": "T2026071304",
+              "title": "唱歌",
+              "estimatedMinutes": 60,
+              "state": "cancelled"
             }
           ]
         }
