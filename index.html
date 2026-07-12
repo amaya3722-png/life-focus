@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#4CAF50">
+  <title>Life Focus · 今日执行</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    :root{--green:#4CAF50;--green-dark:#2e7d32;--green-soft:#e8f5e9;--ink:#17211b;--muted:#718078;--line:#dde5df;--paper:#fff;--bg:#f4f7f4}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif}
+    button,input{font:inherit}button{cursor:pointer}.shell{width:min(760px,100%);margin:auto;padding:0 16px 60px}
+    header{position:sticky;top:0;z-index:20;background:rgba(244,247,244,.94);backdrop-filter:blur(14px);padding:20px 0 12px}
+    .brand{display:flex;align-items:center;justify-content:space-between}.brand h1{font-size:1.45rem;margin:0}.brand p{margin:4px 0 0;color:var(--muted);font-size:.82rem}
+    .sync-button,.primary{border:0;border-radius:12px;background:var(--green);color:#fff;padding:10px 14px;font-weight:700}.sync-button:disabled{opacity:.5}
+    .status{display:flex;gap:8px;align-items:center;margin:6px 0 14px;color:var(--muted);font-size:.78rem}.dot{width:8px;height:8px;border-radius:50%;background:#9aa69f}.status.ready .dot{background:var(--green)}.status.error .dot{background:#e55252}
+    .panel{background:var(--paper);border:1px solid #edf1ee;border-radius:18px;padding:16px;box-shadow:0 6px 22px rgba(27,54,36,.05);margin-bottom:16px}
+    .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.section-head h2{font-size:1rem;margin:0}.section-head span{font-size:.75rem;color:var(--muted)}
+    .quick-add{display:flex;gap:8px;margin-bottom:12px}.quick-add input{flex:1;min-width:0;border:1px solid var(--line);border-radius:12px;padding:11px 12px;outline:none}.quick-add input:focus{border-color:var(--green)}
+    #taskList{display:grid;gap:10px}.task-card{background:#fff;border:1px solid var(--line);border-left:4px solid var(--task-color,var(--green));border-radius:14px;padding:12px;display:flex;gap:10px;align-items:flex-start;transition:.2s}
+    .task-card:hover{box-shadow:0 8px 18px rgba(34,74,44,.08)}.task-card input{width:20px;height:20px;accent-color:var(--green);margin-top:2px}.task-copy{flex:1;min-width:0}.task-copy strong{display:block;font-size:.92rem}.task-copy small{display:block;margin-top:4px;color:var(--muted)}.task-card.completed strong{text-decoration:line-through;color:#93a098}
+    .empty{padding:22px;text-align:center;border:1px dashed var(--line);border-radius:14px;color:var(--muted)}
+    .time-slot{min-height:54px;border:2px dashed #e2e8e3;border-radius:12px;padding:8px 12px;display:flex;align-items:center;gap:10px;position:relative;transition:.2s;margin-bottom:7px}
+    .time-slot.drag-over{border-color:var(--green);background:var(--green-soft);box-shadow:0 0 0 3px rgba(76,175,80,.16)}.time-slot.filled{min-height:78px;border-style:solid;border-color:var(--line);background:#fff;padding-left:14px}.time-slot.completed{opacity:.68;background:#f3faf3}
+    .time-slot-label{font-size:.75rem;font-weight:700;color:#93a098;min-width:42px}.time-slot-content{flex:1;min-width:0}.time-slot-empty-text{font-size:.75rem;color:#bcc5bf;font-style:italic}
+    .time-block-color{position:absolute;left:0;top:7px;bottom:7px;width:4px;border-radius:0 4px 4px 0}.time-block-head{display:flex;align-items:center;gap:8px}.time-block-copy{flex:1;min-width:0;display:flex;flex-direction:column}.time-block-copy strong{font-size:.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.time-block-copy small{color:#9ca3af;font-size:.7rem}.time-block-check input{width:18px;height:18px;accent-color:var(--green)}.time-block-remove{width:30px;height:30px;border:0;border-radius:50%;background:transparent;color:#9ca3af;font-size:20px}
+    .mini-pomo-open{margin-top:7px;border:0;background:var(--green-soft);color:var(--green-dark);padding:7px 11px;border-radius:999px;font-size:.75rem;font-weight:700}.mini-timer{margin-top:7px;padding:9px 10px;border-radius:11px;background:#fff2ef;display:flex;align-items:center;justify-content:space-between;gap:8px}.mini-timer.rest{background:#fff7e4}.mini-timer>div:first-child{display:flex;align-items:center;gap:8px}.mini-timer-phase{color:#6b7280;font-size:.72rem}.mini-timer-value{font-variant-numeric:tabular-nums;color:#e53935}.mini-timer.rest .mini-timer-value{color:#ef8f00}.mini-timer-actions{display:flex;gap:6px}.mini-timer-actions button{border:0;padding:6px 9px;border-radius:8px;font-size:.72rem;background:var(--green);color:white}.mini-timer-actions button+button{background:#eef1ef;color:#555}
+    .task-card-dragging{opacity:.45;transform:scale(.98)}.task-scheduled{background:#f7fcf7}.time-block-assigned-badge{display:inline-flex;margin-left:7px;padding:1px 6px;border-radius:999px;color:var(--green-dark);background:var(--green-soft);font-size:.65rem;text-decoration:none}.drag-preview{position:fixed;z-index:9999;pointer-events:none;opacity:.88;background:#fff;border-radius:12px;padding:9px 13px;box-shadow:0 12px 30px rgba(0,0,0,.18);max-width:80vw}.task-pool-drop{outline:2px dashed var(--green);outline-offset:6px;border-radius:12px}.time-block-toast{position:fixed;top:76px;left:50%;transform:translateX(-50%);z-index:9999;max-width:88vw;padding:10px 16px;border-radius:10px;background:#1f2937;color:#fff}
+    @media(max-width:600px){.shell{padding-inline:12px}.panel{padding:13px}.time-slot{align-items:flex-start}.time-slot-label{padding-top:7px}.mini-timer{align-items:stretch;flex-direction:column}.mini-timer-actions button{min-height:36px}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand"><div><h1>Life Focus</h1><p id="todayLabel">把今天真正重要的事放进时间里</p></div><button id="syncBtn" class="sync-button">同步任务</button></div>
+      <div id="syncStatus" class="status"><i class="dot"></i><span>正在读取今日重点…</span></div>
+    </header>
+    <main>
+      <section class="panel">
+        <div class="section-head"><h2>今日任务</h2><span>拖到下方时间轴，任务池仍保留</span></div>
+        <div class="quick-add"><input id="quickTask" placeholder="也可以临时添加一件事"><button id="quickAddBtn" class="primary">添加</button></div>
+        <div id="taskList"></div>
+      </section>
+      <section class="panel" id="timeBlockSection">
+        <div class="section-head"><h2>时间轴排程</h2><span>07:00–23:00</span></div>
+        <div id="timeBlockGrid"></div>
+      </section>
+    </main>
+  </div>
+  <script src="js/app.js"></script>
+  <script src="js/time-block.js"></script>
+  <script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js'))}</script>
+</body>
+</html>

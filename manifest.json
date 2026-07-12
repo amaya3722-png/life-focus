@@ -1,0 +1,9 @@
+{
+  "name": "Life Focus",
+  "short_name": "Life Focus",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f4f7f4",
+  "theme_color": "#4CAF50",
+  "lang": "zh-CN"
+}
